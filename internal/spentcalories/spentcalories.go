@@ -23,7 +23,7 @@ var (
 	ErrConvToInt     = errors.New("Error converting a string to a number.")
 	ErrNegativeValue = errors.New("Negative or zero number of value.")
 	ErrConvToTime    = errors.New("Time conversion error.")
-	ErrSportInput    = errors.New("This type of activity was not found.")
+	ErrSportInput    = errors.New("неизвестный тип тренировки")
 )
 
 func parseTraining(data string) (int, string, time.Duration, error) {
