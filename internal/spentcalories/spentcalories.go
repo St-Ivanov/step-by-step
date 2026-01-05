@@ -42,6 +42,9 @@ func parseTraining(data string) (int, string, time.Duration, error) {
 	if err != nil {
 		return 0, "", 0, ErrConvToTime
 	}
+	if walkingTime <= 0 {
+		return 0, "", 0, fmt.Errorf("%w Exactly the time.", ErrNegativeValue)
+	}
 	return steps, dataSlices[1], walkingTime, nil
 }
 
