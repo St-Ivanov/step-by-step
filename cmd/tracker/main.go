@@ -2,15 +2,19 @@ package main
 
 import (
 	"fmt"
-	"log"
 
+	"github.com/St-Ivanov/step-by-step/internal/actioninfo"
 	"github.com/St-Ivanov/step-by-step/internal/daysteps"
-	"github.com/St-Ivanov/step-by-step/internal/spentcalories"
+	"github.com/St-Ivanov/step-by-step/internal/personaldata"
+	"github.com/St-Ivanov/step-by-step/internal/trainings"
 )
 
 func main() {
-	weight := 84.6
-	height := 1.87
+	person := personaldata.Personal{
+		Name:   "Витя",
+		Weight: 84.6,
+		Height: 1.87,
+	}
 
 	// дневная активность
 	input := []string{
@@ -25,22 +29,16 @@ func main() {
 
 	fmt.Println("Активность в течение дня")
 
-	var (
-		dayActionsInfo string
-		dayActionsLog  []string
-	)
-
-	for _, v := range input {
-		dayActionsInfo = daysteps.DayActionInfo(v, weight, height)
-		dayActionsLog = append(dayActionsLog, dayActionsInfo)
+	daySteps := daysteps.DaySteps{
+		Personal: person,
 	}
 
-	for _, v := range dayActionsLog {
-		fmt.Println(v)
-	}
+	daySteps.Print()
 
-	// тренировки
-	trainings := []string{
+	actioninfo.Info(input, &daySteps)
+
+	// // тренировки
+	actions := []string{
 		"3456,Ходьба,3h00m",
 		"something is wrong",
 		"678,Бег,0h5m",
@@ -50,20 +48,13 @@ func main() {
 		"15392,Бег,0h45m",
 	}
 
-	var trainingLog []string
-
-	for _, v := range trainings {
-		trainingInfo, err := spentcalories.TrainingInfo(v, weight, height)
-		if err != nil {
-			log.Printf("не получилось получить информацию о тренировке: %v", err)
-			continue
-		}
-		trainingLog = append(trainingLog, trainingInfo)
+	trains := trainings.Training{
+		Personal: person,
 	}
 
 	fmt.Println("Журнал тренировок")
 
-	for _, v := range trainingLog {
-		fmt.Println(v)
-	}
+	trains.Print()
+
+	actioninfo.Info(actions, &trains)
 }
