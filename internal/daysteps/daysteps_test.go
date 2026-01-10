@@ -1,13 +1,12 @@
 package daysteps
 
 import (
-	"bytes"
-	"log"
-	"os"
 	"testing"
 	"time"
 
+	"github.com/St-Ivanov/step-by-step/internal/personaldata"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -211,138 +210,211 @@ func (suite *DayStepsTestSuite) TestParsePackage() {
 
 	for _, tt := range tests {
 		suite.Run(tt.name, func() {
-			gotSteps, gotDuration, err := parsePackage(tt.input)
+			ds := &DaySteps{}
+			err := ds.Parse(tt.input)
 
 			if tt.wantErr {
-				assert.Error(suite.T(), err, "parsePackage() для строки данных %q ожидалась ошибка, но её нет", tt.input)
-			} else {
-				assert.NoError(suite.T(), err, "parsePackage() неожиданная ошибка для строки данных %q: %v", tt.input, err)
+				require.Error(suite.T(), err, "Parse() для строки данных %q ожидалась ошибка, но её нет", tt.input)
+				return
 			}
-
-			assert.Equal(suite.T(), tt.wantSteps, gotSteps, "parsePackage() полученное количество шагов: %v, ожидается %v", gotSteps, tt.wantSteps)
-			assert.Equal(suite.T(), tt.wantDuration, gotDuration, "parsePackage() полученная продолжительность прогулки: %v, ожидается %v", gotDuration, tt.wantDuration)
+			require.NoError(suite.T(), err, "Parse() неожиданная ошибка для строки данных %q: %v", tt.input, err)
+			assert.Equal(suite.T(), tt.wantSteps, ds.Steps, "Parse() полученное количество шагов: %v, ожидается %v", ds.Steps, tt.wantSteps)
+			assert.Equal(suite.T(), tt.wantDuration, ds.Duration, "Parse() полученная продолжительность прогулки: %v, ожидается %v", ds.Duration, tt.wantDuration)
 		})
 	}
 }
 
 func (suite *DayStepsTestSuite) TestDayActionInfo() {
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
-
-	defer log.SetOutput(os.Stderr)
-
 	tests := []struct {
-		name          string
-		input         string
-		weight        float64
-		height        float64
-		want          string
-		wantLogOutput bool
+		name    string
+		ds      DaySteps
+		want    string
+		wantErr bool
 	}{
 		{
-			name:          "нормальная нагрузка - один час",
-			input:         "6000,1h00m",
-			weight:        75.0,
-			height:        1.75,
-			want:          "Количество шагов: 6000.\nДистанция составила 3.90 км.\nВы сожгли 177.19 ккал.\n",
-			wantLogOutput: false,
+			name: "нормальная нагрузка - один час",
+			ds: DaySteps{
+				Steps:    6000,
+				Duration: time.Hour,
+				Personal: personaldata.Personal{
+					Weight: 75.0,
+					Height: 1.75,
+				},
+			},
+			want:    "Количество шагов: 6000.\nДистанция составила 4.72 км.\nВы сожгли 177.19 ккал.\n",
+			wantErr: false,
 		},
 		{
-			name:          "нормальная нагрузка - полчаса",
-			input:         "3000,30m",
-			weight:        75.0,
-			height:        1.75,
-			want:          "Количество шагов: 3000.\nДистанция составила 1.95 км.\nВы сожгли 88.59 ккал.\n",
-			wantLogOutput: false,
+			name: "нормальная нагрузка - полчаса",
+			ds: DaySteps{
+				Steps:    3000,
+				Duration: 30 * time.Minute,
+				Personal: personaldata.Personal{
+					Weight: 75.0,
+					Height: 1.75,
+				},
+			},
+			want:    "Количество шагов: 3000.\nДистанция составила 2.36 км.\nВы сожгли 88.59 ккал.\n",
+			wantErr: false,
 		},
 		{
-			name:          "высокая нагрузка",
-			input:         "20000,1h00m",
-			weight:        75.0,
-			height:        1.75,
-			want:          "Количество шагов: 20000.\nДистанция составила 13.00 км.\nВы сожгли 590.62 ккал.\n",
-			wantLogOutput: false,
+			name: "высокая нагрузка",
+			ds: DaySteps{
+				Steps:    20000,
+				Duration: time.Hour,
+				Personal: personaldata.Personal{
+					Weight: 75.0,
+					Height: 1.75,
+				},
+			},
+			want:    "Количество шагов: 20000.\nДистанция составила 15.75 км.\nВы сожгли 590.62 ккал.\n",
+			wantErr: false,
 		},
 		{
-			name:          "низкая нагрузка",
-			input:         "1000,2h00m",
-			weight:        75.0,
-			height:        1.75,
-			want:          "Количество шагов: 1000.\nДистанция составила 0.65 км.\nВы сожгли 29.53 ккал.\n",
-			wantLogOutput: false,
+			name: "низкая нагрузка",
+			ds: DaySteps{
+				Steps:    1000,
+				Duration: 2 * time.Hour,
+				Personal: personaldata.Personal{
+					Weight: 75.0,
+					Height: 1.75,
+				},
+			},
+			want:    "Количество шагов: 1000.\nДистанция составила 0.79 км.\nВы сожгли 29.53 ккал.\n",
+			wantErr: false,
 		},
 		{
-			name:          "другой вес и рост",
-			input:         "6000,1h00m",
-			weight:        60.0,
-			height:        1.85,
-			want:          "Количество шагов: 6000.\nДистанция составила 3.90 км.\nВы сожгли 149.85 ккал.\n",
-			wantLogOutput: false,
+			name: "другой вес и рост",
+			ds: DaySteps{
+				Steps:    6000,
+				Duration: time.Hour,
+				Personal: personaldata.Personal{
+					Weight: 60.0,
+					Height: 1.85,
+				},
+			},
+			want:    "Количество шагов: 6000.\nДистанция составила 5.00 км.\nВы сожгли 149.85 ккал.\n",
+			wantErr: false,
 		},
 		{
-			name:          "некорректный формат",
-			input:         "not valid",
-			weight:        75.0,
-			height:        1.75,
-			want:          "",
-			wantLogOutput: true,
+			name: "нулевые шаги",
+			ds: DaySteps{
+				Steps:    0,
+				Duration: time.Hour,
+				Personal: personaldata.Personal{
+					Weight: 75.0,
+					Height: 1.75,
+				},
+			},
+			want:    "",
+			wantErr: true,
 		},
 		{
-			name:          "пустая строка",
-			input:         "",
-			weight:        75.0,
-			height:        1.75,
-			want:          "",
-			wantLogOutput: true,
+			name: "отрицательные шаги",
+			ds: DaySteps{
+				Steps:    -1000,
+				Duration: time.Hour,
+				Personal: personaldata.Personal{
+					Weight: 75.0,
+					Height: 1.75,
+				},
+			},
+			want:    "",
+			wantErr: true,
 		},
 		{
-			name:          "отрицательные шаги",
-			input:         "-1000,1h00m",
-			weight:        75.0,
-			height:        1.75,
-			want:          "",
-			wantLogOutput: true,
+			name: "нулевая продолжительность",
+			ds: DaySteps{
+				Steps:    1000,
+				Duration: 0,
+				Personal: personaldata.Personal{
+					Weight: 75.0,
+					Height: 1.75,
+				},
+			},
+			want:    "",
+			wantErr: true,
 		},
 		{
-			name:          "ноль шагов",
-			input:         "0,1h00m",
-			weight:        75.0,
-			height:        1.75,
-			want:          "",
-			wantLogOutput: true,
+			name: "отрицательная продолжительность",
+			ds: DaySteps{
+				Steps:    1000,
+				Duration: -time.Hour,
+				Personal: personaldata.Personal{
+					Weight: 75.0,
+					Height: 1.75,
+				},
+			},
+			want:    "",
+			wantErr: true,
 		},
 		{
-			name:          "отрицательная продолжительность",
-			input:         "1000,-1h00m",
-			weight:        75.0,
-			height:        1.75,
-			want:          "",
-			wantLogOutput: true,
+			name: "нулевой вес",
+			ds: DaySteps{
+				Steps:    6000,
+				Duration: time.Hour,
+				Personal: personaldata.Personal{
+					Weight: 0,
+					Height: 1.75,
+				},
+			},
+			want:    "",
+			wantErr: true,
 		},
 		{
-			name:          "нулевая продолжительность",
-			input:         "1000,0h00m",
-			weight:        75.0,
-			height:        1.75,
-			want:          "",
-			wantLogOutput: true,
+			name: "отрицательный вес",
+			ds: DaySteps{
+				Steps:    6000,
+				Duration: time.Hour,
+				Personal: personaldata.Personal{
+					Weight: -75.0,
+					Height: 1.75,
+				},
+			},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "нулевой рост",
+			ds: DaySteps{
+				Steps:    6000,
+				Duration: time.Hour,
+				Personal: personaldata.Personal{
+					Weight: 75.0,
+					Height: 0,
+				},
+			},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "отрицательный рост",
+			ds: DaySteps{
+				Steps:    6000,
+				Duration: time.Hour,
+				Personal: personaldata.Personal{
+					Weight: 75.0,
+					Height: -1.75,
+				},
+			},
+			want:    "",
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		suite.Run(tt.name, func() {
-			buf.Reset()
-
-			got := DayActionInfo(tt.input, tt.weight, tt.height)
-
-			assert.Equal(suite.T(), tt.want, got, "\nDayActionInfo() получено:\n%v\nожидается:\n%v\n(ввод: %q, вес: %.1f, рост: %.2f)",
-				got, tt.want, tt.input, tt.weight, tt.height)
-
-			if tt.wantLogOutput {
-				assert.NotEmpty(suite.T(), buf.String(), "Ожидался вывод в лог, но его нет")
-			} else {
-				assert.Empty(suite.T(), buf.String(), "Неожиданный вывод в лог: %v", buf.String())
+			got, err := tt.ds.ActionInfo()
+			if tt.wantErr {
+				require.Error(suite.T(), err, "Для тестового случая %q (шаги: %d, продолжительность: %v, вес: %.1f, рост: %.2f) ожидалась ошибка, но её нет",
+					tt.name, tt.ds.Steps, tt.ds.Duration, tt.ds.Weight, tt.ds.Height)
+				require.Empty(suite.T(), got, "Для тестового случая %q (шаги: %d, продолжительность: %v, вес: %.1f, рост: %.2f) ожидалась пустая строка, но получено: %q",
+					tt.name, tt.ds.Steps, tt.ds.Duration, tt.ds.Weight, tt.ds.Height, got)
+				return
 			}
+			require.NoError(suite.T(), err)
+			require.Equal(suite.T(), tt.want, got, "\nActionInfo() получено:\n%v\nожидается:\n%v\n(шаги: %d, продолжительность: %v, вес: %.1f, рост: %.2f)",
+				got, tt.want, tt.ds.Steps, tt.ds.Duration, tt.ds.Weight, tt.ds.Height)
 		})
 	}
 }
